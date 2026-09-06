@@ -23,17 +23,21 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install NDK / CMake / platform
+      - name: Update SDK tools, accept licenses, install NDK + CMake
         run: |
-          sdkmanager --install \
-            "platforms;android-37" \
-            "build-tools;35.0.0" \
-            "ndk;28.0.13004108" \
-            "cmake;3.22.1"
+          set -x
+          sdkmanager --install "cmdline-tools;latest"
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "ndk;28.0.13004108" "cmake;3.22.1"
+          # Let AGP fetch the right platform/build-tools; try explicitly but don't fail if unavailable yet
+          sdkmanager --install "platforms;android-37" "build-tools;37.0.0" || \
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" || true
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          sdkmanager --list_installed
 
       - name: Generate a self-signed release keystore
         # ponytail: fresh key every run -> reinstall on rebuild. Move the 4 values
-        # to repo secrets + `keytool -importkeystore` if you want stable updates.
+        # to repo secrets + keytool -importkeystore for stable app updates.
         run: |
           keytool -genkeypair -v \
             -keystore "$RUNNER_TEMP/release.jks" \
@@ -51,8 +55,19 @@ jobs:
         run: ./gradlew :app:assembleGitHubProdRelease --no-daemon --stacktrace
 
       - name: Upload APK artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: melonDS-fold8-release-apk
           path: app/build/outputs/apk/**/release/*.apk
-          if-no-files-found: error
+          if-no-files-found: warn
+
+      - name: Upload build reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            app/build/reports/**
+            app/build/outputs/logs/**
+          if-no-files-found: ignore
