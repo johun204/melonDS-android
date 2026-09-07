@@ -378,6 +378,22 @@ class EmulatorViewModel @Inject constructor(
         }
     }
 
+    /**
+     * folDS: called when the activity is stopped (app backgrounded, screen off, or the foldable
+     * closed). Emulation is already paused by onPause; if auto quick-save is on, flush the current
+     * state to the quick slot so nothing is lost if the process is killed while folded.
+     */
+    fun saveStateOnBackground() {
+        if (!settingsRepository.isAutoSaveEnabled()) {
+            return
+        }
+        val rom = (_emulatorState.value as? EmulatorState.RunningRom)?.rom ?: return
+        sessionCoroutineScope.launch {
+            val quickSlot = saveStatesRepository.getRomQuickSaveStateSlot(rom)
+            saveRomState(rom, quickSlot)
+        }
+    }
+
     fun resetEmulator() {
         if (_emulatorState.value.isRunning()) {
             sessionCoroutineScope.launch {

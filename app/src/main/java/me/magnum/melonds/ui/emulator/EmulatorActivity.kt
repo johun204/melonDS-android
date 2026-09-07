@@ -1027,6 +1027,7 @@ class EmulatorActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        viewModel.saveStateOnBackground()
         getSystemService<DisplayManager>()?.unregisterDisplayListener(displayListener)
         getSystemService<InputManager>()?.unregisterInputDeviceListener(connectedControllerManager)
         connectedControllerManager.stopTrackingControllers()
