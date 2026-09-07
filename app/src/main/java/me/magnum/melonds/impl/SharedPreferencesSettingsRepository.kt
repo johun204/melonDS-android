@@ -195,6 +195,10 @@ class SharedPreferencesSettingsRepository(
         return preferences.getInt("autosave_interval_minutes", 5).coerceAtLeast(1)
     }
 
+    override fun isLockOrientationWhenUnfoldedEnabled(): Boolean {
+        return preferences.getBoolean("lock_orientation_when_unfolded", true)
+    }
+
     override fun getRewindWindowPosition(): RewindWindowPosition {
         val positionPreference = preferences.getString("rewind_window_position", "bottom")!!
         return RewindWindowPosition.valueOf(positionPreference.uppercase())

@@ -56,6 +56,7 @@ interface SettingsRepository {
     fun getSaveStateDirectory(rom: Rom): Uri?
     fun isAutoSaveEnabled(): Boolean
     fun getAutoSaveIntervalMinutes(): Int
+    fun isLockOrientationWhenUnfoldedEnabled(): Boolean
 
     fun getControllerConfiguration(): ControllerConfiguration
     fun observeControllerConfiguration(): StateFlow<ControllerConfiguration>

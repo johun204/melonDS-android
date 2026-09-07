@@ -43,6 +43,13 @@
             app:iconSpaceReserved="false"
             android:defaultValue="false" />
 
+    <SwitchPreference
+            android:key="lock_orientation_when_unfolded"
+            android:title="@string/lock_orientation_unfolded"
+            android:summary="@string/lock_orientation_unfolded_summary"
+            app:iconSpaceReserved="false"
+            android:defaultValue="true" />
+
     <Preference
             android:key="backup_settings"
             android:title="@string/backup_settings"

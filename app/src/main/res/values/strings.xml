@@ -177,6 +177,8 @@
     <string name="rewind_window_position">Rewind window position</string>
     <string name="sustained_performance_mode">Sustained performance mode</string>
     <string name="sustained_performance_mode_summary">When enabled, peak performance will be lower but thermal throttling will be less pronounced.</string>
+    <string name="lock_orientation_unfolded">펼쳤을 때 세로 고정</string>
+    <string name="lock_orientation_unfolded_summary">폴더블을 펼친 상태에서는 화면을 세로로 고정해 DS 배치를 유지합니다</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="check_for_updates_summary">When enabled, the app will periodically check for available updates</string>
     <string name="rom_icon_filtering">Icon filtering</string>

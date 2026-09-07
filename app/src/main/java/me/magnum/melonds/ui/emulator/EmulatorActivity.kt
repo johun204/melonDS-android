@@ -60,7 +60,9 @@ import me.magnum.melonds.domain.model.Rect
 import me.magnum.melonds.domain.model.SaveStateSlot
 import me.magnum.melonds.domain.model.layout.Insets
 import me.magnum.melonds.domain.model.layout.LayoutComponent
+import android.content.pm.ActivityInfo
 import me.magnum.melonds.domain.model.layout.ScreenFold
+import me.magnum.melonds.domain.repositories.SettingsRepository
 import me.magnum.melonds.domain.model.rewind.RewindWindowPosition
 import me.magnum.melonds.domain.model.rom.Rom
 import me.magnum.melonds.domain.model.rom.config.RomGbaSlotConfig
@@ -163,6 +165,9 @@ class EmulatorActivity : AppCompatActivity() {
 
     @Inject
     lateinit var appForegroundStateObserver: AppForegroundStateObserver
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
 
     private var presentation: ExternalPresentation? = null
 
@@ -608,6 +613,13 @@ class EmulatorActivity : AppCompatActivity() {
                         }
                     }
                     viewModel.setScreenFolds(folds)
+
+                    // folDS #5: keep the DS layout upright while the foldable is open.
+                    requestedOrientation = if (folds.isNotEmpty() && settingsRepository.isLockOrientationWhenUnfoldedEnabled()) {
+                        ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                    } else {
+                        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    }
                 }
             }
         }

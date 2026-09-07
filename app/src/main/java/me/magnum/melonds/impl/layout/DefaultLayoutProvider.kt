@@ -77,6 +77,10 @@ class DefaultLayoutProvider(
                     if (folds.any { it.orientation == Orientation.LANDSCAPE }) {
                         // Flip-phone layout
                         buildDefaultFoldingPortraitLayout(width, height, folds, mainDisplayInsets)
+                    } else if (height > width * 2) {
+                        // folDS #3: tall, narrow screen (foldable cover display / slim phone) - use a
+                        // compact edge-to-edge stack so the two screens stay usable.
+                        buildCoverLayout(width, height, mainDisplayInsets)
                     } else {
                         // Simple portrait layout. Ignore vertical fold since there's no good way to support it
                         buildDefaultPortraitLayout(width, height, mainDisplayInsets)
@@ -99,6 +103,73 @@ class DefaultLayoutProvider(
         }
 
         return UILayout(mainScreenLayout, secondaryScreenLayout)
+    }
+
+    /**
+     * folDS #3: compact layout for the foldable cover display (or a very slim phone). The screen is
+     * too narrow to waste on side margins, so the two DS screens are stacked edge-to-edge at full
+     * width in the upper area and the controls sit in a tight cluster below with smaller buttons.
+     */
+    private fun buildCoverLayout(width: Int, height: Int, insets: Insets): ScreenLayout {
+        val safeLeft = insets.left
+        val safeTop = insets.top
+        val safeRight = insets.right
+        val safeBottom = insets.bottom
+        val safeWidth = width - safeLeft - safeRight
+
+        val largeButtonsSize = screenUnitsConverter.dpToPixels(112f).toInt()
+        val lrButtonsSize = screenUnitsConverter.dpToPixels(44f).toInt()
+        val smallButtonsSize = screenUnitsConverter.dpToPixels(36f).toInt()
+        val spacing = screenUnitsConverter.dpToPixels(4f).toInt()
+
+        var screenWidth = safeWidth
+        var screenHeight = (screenWidth / consoleAspectRatio).toInt()
+        val screenMargin: Int
+        val bottomArea = height - safeBottom - (largeButtonsSize + lrButtonsSize + spacing * 3)
+        if (safeTop + screenHeight * 2 > bottomArea) {
+            screenHeight = ((bottomArea - safeTop) / 2).coerceAtLeast(1)
+            screenWidth = (screenHeight * consoleAspectRatio).toInt()
+            screenMargin = (safeWidth - screenWidth) / 2
+        } else {
+            screenMargin = 0
+        }
+
+        val topScreen = Rect(safeLeft + screenMargin, safeTop, screenWidth, screenHeight)
+        val bottomScreen = Rect(safeLeft + screenMargin, safeTop + screenHeight, screenWidth, screenHeight)
+        val controlsTop = bottomScreen.bottom + spacing
+
+        val dpad = Rect(safeLeft, height - safeBottom - largeButtonsSize, largeButtonsSize, largeButtonsSize)
+        val face = Rect(width - safeRight - largeButtonsSize, height - safeBottom - largeButtonsSize, largeButtonsSize, largeButtonsSize)
+        val lButton = Rect(safeLeft, controlsTop, lrButtonsSize, lrButtonsSize)
+        val rButton = Rect(width - safeRight - lrButtonsSize, controlsTop, lrButtonsSize, lrButtonsSize)
+        val select = Rect(width / 2 - smallButtonsSize - spacing, height - safeBottom - smallButtonsSize, smallButtonsSize, smallButtonsSize)
+        val start = Rect(width / 2 + spacing, height - safeBottom - smallButtonsSize, smallButtonsSize, smallButtonsSize)
+
+        val utils = listOf(
+            LayoutComponent.BUTTON_HINGE,
+            LayoutComponent.BUTTON_TOGGLE_SOFT_INPUT,
+            LayoutComponent.BUTTON_FAST_FORWARD_TOGGLE,
+        )
+        val utilTotalWidth = utils.size * smallButtonsSize + (utils.size - 1) * spacing
+        var utilX = width / 2 - utilTotalWidth / 2
+        val utilComponents = utils.map { component ->
+            val rect = Rect(utilX, controlsTop, smallButtonsSize, smallButtonsSize)
+            utilX += smallButtonsSize + spacing
+            PositionedLayoutComponent(rect, component)
+        }
+
+        return ScreenLayout(
+            listOf(
+                PositionedLayoutComponent(topScreen, LayoutComponent.TOP_SCREEN),
+                PositionedLayoutComponent(bottomScreen, LayoutComponent.BOTTOM_SCREEN),
+                PositionedLayoutComponent(dpad, LayoutComponent.DPAD),
+                PositionedLayoutComponent(face, LayoutComponent.BUTTONS),
+                PositionedLayoutComponent(lButton, LayoutComponent.BUTTON_L),
+                PositionedLayoutComponent(rButton, LayoutComponent.BUTTON_R),
+                PositionedLayoutComponent(select, LayoutComponent.BUTTON_SELECT),
+                PositionedLayoutComponent(start, LayoutComponent.BUTTON_START),
+            ) + utilComponents
+        )
     }
 
     private fun buildDefaultPortraitLayout(width: Int, height: Int, insets: Insets, singleScreenComponent: LayoutComponent? = null): ScreenLayout {
@@ -346,17 +417,35 @@ class DefaultLayoutProvider(
     /**
      * folDS: layout used while the foldable is open. The area is split into an upper and a lower
      * half at the hinge (or the safe-area centre when the hinge is not horizontal). Both DS screens
-     * are pillar-boxed to the 4:3 DS ratio and share the same width, stacked against the split line.
-     * The touch screen sits centred in the lower half; the controls live in the side margins beside
-     * it, in the same spots as the physical DS buttons - D-pad left of the touch screen, face
-     * buttons right, shoulder buttons in the top corners, Start/Select underneath. Controls never
-     * overlap the screens.
+     * are pillar-boxed to the 4:3 DS ratio and stacked against the split line. The touch screen sits
+     * centred in the lower half; the controls live in the side margins beside it, in the same spots
+     * as the physical DS buttons - D-pad left of the touch screen, face buttons right, shoulder
+     * buttons in the top corners, Start/Select underneath. Controls never overlap the screens.
+     *
+     * When the hinge is separating (half-opened / tabletop "flex" posture) the upper half is treated
+     * as a monitor: the top screen is grown to fill it instead of matching the touch-screen width.
+     * A separating vertical hinge shifts the whole split onto the larger side so nothing sits on it.
      */
     private fun buildFoldsUnfoldedLayout(width: Int, height: Int, folds: List<ScreenFold>, insets: Insets): ScreenLayout {
-        val safeLeft = insets.left
+        var safeLeft = insets.left
         val safeTop = insets.top
-        val safeRight = insets.right
+        var safeRight = insets.right
         val safeBottom = insets.bottom
+
+        // #4: keep everything off a separating vertical hinge by clamping to its larger side.
+        val verticalSeparatingFold = folds.firstOrNull {
+            it.orientation == Orientation.PORTRAIT && it.type == ScreenFold.FoldType.SEAMLESS
+        }
+        if (verticalSeparatingFold != null) {
+            val leftRoom = verticalSeparatingFold.foldBounds.x - safeLeft
+            val rightRoom = (width - safeRight) - verticalSeparatingFold.foldBounds.right
+            if (leftRoom >= rightRoom) {
+                safeRight = width - verticalSeparatingFold.foldBounds.x
+            } else {
+                safeLeft = verticalSeparatingFold.foldBounds.right
+            }
+        }
+
         val safeWidth = width - safeLeft - safeRight
         val safeHeight = height - safeTop - safeBottom
 
@@ -369,25 +458,36 @@ class DefaultLayoutProvider(
         val horizontalFold = folds.firstOrNull { it.orientation == Orientation.LANDSCAPE }
         val splitTop = horizontalFold?.foldBounds?.y ?: (safeTop + safeHeight / 2)
         val splitBottom = horizontalFold?.foldBounds?.bottom ?: (safeTop + safeHeight / 2)
+        // #2: SEAMLESS == isSeparating == half-opened. In that posture the top panel is a monitor.
+        val isFlexPosture = horizontalFold?.type == ScreenFold.FoldType.SEAMLESS
 
         val upperHalf = splitTop - safeTop
         val lowerHalf = (height - safeBottom) - splitBottom
         val startSelectRow = smallButtonSize + spacing
 
-        // Shared, pillar-boxed screen width. Limited by the side margins (which must fit the
-        // controls) and by the height of each half.
+        // Touch-screen width. Limited by the side margins (which must fit the controls) and by the
+        // height of the lower half.
         val gutterMin = faceControlSize + spacing * 2
         val maxWidthByGutters = (safeWidth - gutterMin * 2).toFloat()
-        val maxWidthByUpper = (upperHalf - spacing) * consoleAspectRatio
         val maxWidthByLower = (lowerHalf - startSelectRow - spacing) * consoleAspectRatio
-        val screenWidth = minOf(maxWidthByGutters, maxWidthByUpper, maxWidthByLower)
+        val maxWidthByUpper = (upperHalf - spacing) * consoleAspectRatio
+        val screenWidth = minOf(maxWidthByGutters, maxWidthByLower, if (isFlexPosture) Float.MAX_VALUE else maxWidthByUpper)
             .toInt()
             .coerceAtLeast((safeWidth * 0.4f).toInt())
         val screenHeight = (screenWidth / consoleAspectRatio).toInt()
         val screenLeft = safeLeft + (safeWidth - screenWidth) / 2
         val screenRight = screenLeft + screenWidth
 
-        val topScreen = Rect(screenLeft, splitTop - screenHeight, screenWidth, screenHeight)
+        // Top screen: fills the upper panel in flex posture, otherwise matches the touch screen.
+        val topTargetHeight = if (isFlexPosture) (upperHalf - spacing).coerceAtLeast(screenHeight) else screenHeight
+        val topScreenWidth = (topTargetHeight * consoleAspectRatio).toInt().coerceAtMost(safeWidth)
+        val topScreenHeight = (topScreenWidth / consoleAspectRatio).toInt()
+        val topScreen = Rect(
+            safeLeft + (safeWidth - topScreenWidth) / 2,
+            splitTop - topScreenHeight,
+            topScreenWidth,
+            topScreenHeight,
+        )
         val bottomScreen = Rect(screenLeft, splitBottom, screenWidth, screenHeight)
 
         // Face controls in the side margins, vertically centred on the touch screen.
