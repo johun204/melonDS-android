@@ -9,7 +9,7 @@ import me.magnum.melonds.ui.common.LayoutComponentViewBuilder
 class DpadLayoutComponentViewBuilder : LayoutComponentViewBuilder() {
     override fun build(context: Context): View {
         return ImageView(context).apply {
-            setImageResource(R.drawable.keypad)
+            setImageResource(R.drawable.control_dpad_ds)
         }
     }
 

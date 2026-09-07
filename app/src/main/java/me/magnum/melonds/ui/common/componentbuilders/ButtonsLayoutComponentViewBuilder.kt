@@ -9,7 +9,7 @@ import me.magnum.melonds.ui.common.LayoutComponentViewBuilder
 class ButtonsLayoutComponentViewBuilder : LayoutComponentViewBuilder() {
     override fun build(context: Context): View {
         return ImageView(context).apply {
-            setImageResource(R.drawable.buttons)
+            setImageResource(R.drawable.control_face_buttons_ds)
         }
     }
 

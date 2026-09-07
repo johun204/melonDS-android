@@ -1,0 +1,51 @@
+<!-- folDS: A/B/X/Y face buttons styled after the Nintendo DS (round grey plastic, embossed letters). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Shadows -->
+    <path android:pathData="M100,40 m-31,0 a31,31 0 1 0 62,0 a31,31 0 1 0 -62,0z" android:fillColor="#000000" android:fillAlpha="0.3" />
+    <path android:pathData="M100,164 m-31,0 a31,31 0 1 0 62,0 a31,31 0 1 0 -62,0z" android:fillColor="#000000" android:fillAlpha="0.3" />
+    <path android:pathData="M36,100 m-31,0 a31,31 0 1 0 62,0 a31,31 0 1 0 -62,0z" android:fillColor="#000000" android:fillAlpha="0.3" />
+    <path android:pathData="M164,100 m-31,0 a31,31 0 1 0 62,0 a31,31 0 1 0 -62,0z" android:fillColor="#000000" android:fillAlpha="0.3" />
+
+    <!-- X (top) -->
+    <path android:pathData="M100,36 m-30,0 a30,30 0 1 0 60,0 a30,30 0 1 0 -60,0z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="90" android:centerY="26" android:gradientRadius="52"
+                android:startColor="#5C5C61" android:endColor="#333336" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M91,27 L109,45 M109,27 L91,45" android:strokeColor="#1E1E20" android:strokeWidth="5" android:strokeLineCap="round" />
+
+    <!-- B (bottom) -->
+    <path android:pathData="M100,164 m-30,0 a30,30 0 1 0 60,0 a30,30 0 1 0 -60,0z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="90" android:centerY="154" android:gradientRadius="52"
+                android:startColor="#5C5C61" android:endColor="#333336" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M94,153 v22 M94,153 h8 q7,0 7,5.5 q0,5.5 -7,5.5 h-8 M94,164 h9 q7,0 7,5.5 q0,5.5 -7,5.5 h-9"
+        android:strokeColor="#1E1E20" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" />
+
+    <!-- Y (left) -->
+    <path android:pathData="M36,100 m-30,0 a30,30 0 1 0 60,0 a30,30 0 1 0 -60,0z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="26" android:centerY="90" android:gradientRadius="52"
+                android:startColor="#5C5C61" android:endColor="#333336" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M27,89 L36,100 L45,89 M36,100 v12" android:strokeColor="#1E1E20" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" />
+
+    <!-- A (right) -->
+    <path android:pathData="M164,100 m-30,0 a30,30 0 1 0 60,0 a30,30 0 1 0 -60,0z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="154" android:centerY="90" android:gradientRadius="52"
+                android:startColor="#5C5C61" android:endColor="#333336" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M155,112 L164,88 L173,112 M158,104 L170,104" android:strokeColor="#1E1E20" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

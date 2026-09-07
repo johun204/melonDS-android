@@ -68,7 +68,11 @@ class DefaultLayoutProvider(
                 mainLayout to buildSingleScreenLayout(secondaryDisplay.width, secondaryDisplay.height, LayoutComponent.TOP_SCREEN)
             }
         } else {
-            val mainScreenLayout = when (orientation) {
+            val mainScreenLayout = if (folds.isNotEmpty()) {
+                // folDS: whenever the foldable is open (a fold feature is reported) split the area
+                // top/bottom and lay the screens + controls out like real DS hardware.
+                buildFoldsUnfoldedLayout(width, height, folds, mainDisplayInsets)
+            } else when (orientation) {
                 Orientation.PORTRAIT -> {
                     if (folds.any { it.orientation == Orientation.LANDSCAPE }) {
                         // Flip-phone layout
@@ -336,6 +340,99 @@ class DefaultLayoutProvider(
                 PositionedLayoutComponent(Rect(mainFold.foldBounds.right + smallButtonsSize + spacing8dp, safeTop, smallButtonsSize, smallButtonsSize), LayoutComponent.BUTTON_MICROPHONE_TOGGLE),
                 PositionedLayoutComponent(Rect(mainFold.foldBounds.right + spacing8dp * 2, safeTop, smallButtonsSize, smallButtonsSize), LayoutComponent.BUTTON_FAST_FORWARD_TOGGLE),
             )
+        )
+    }
+
+    /**
+     * folDS: layout used while the foldable is open. The area is split into an upper and a lower
+     * half at the hinge (or the safe-area centre when the hinge is not horizontal). Both DS screens
+     * are pillar-boxed to the 4:3 DS ratio and share the same width, stacked against the split line.
+     * The touch screen sits centred in the lower half; the controls live in the side margins beside
+     * it, in the same spots as the physical DS buttons - D-pad left of the touch screen, face
+     * buttons right, shoulder buttons in the top corners, Start/Select underneath. Controls never
+     * overlap the screens.
+     */
+    private fun buildFoldsUnfoldedLayout(width: Int, height: Int, folds: List<ScreenFold>, insets: Insets): ScreenLayout {
+        val safeLeft = insets.left
+        val safeTop = insets.top
+        val safeRight = insets.right
+        val safeBottom = insets.bottom
+        val safeWidth = width - safeLeft - safeRight
+        val safeHeight = height - safeTop - safeBottom
+
+        val faceControlSize = screenUnitsConverter.dpToPixels(160f).toInt()
+        val lrButtonSize = screenUnitsConverter.dpToPixels(58f).toInt()
+        val smallButtonSize = screenUnitsConverter.dpToPixels(44f).toInt()
+        val spacing = screenUnitsConverter.dpToPixels(8f).toInt()
+
+        // Split at the horizontal hinge if there is one, otherwise at the safe-area centre.
+        val horizontalFold = folds.firstOrNull { it.orientation == Orientation.LANDSCAPE }
+        val splitTop = horizontalFold?.foldBounds?.y ?: (safeTop + safeHeight / 2)
+        val splitBottom = horizontalFold?.foldBounds?.bottom ?: (safeTop + safeHeight / 2)
+
+        val upperHalf = splitTop - safeTop
+        val lowerHalf = (height - safeBottom) - splitBottom
+        val startSelectRow = smallButtonSize + spacing
+
+        // Shared, pillar-boxed screen width. Limited by the side margins (which must fit the
+        // controls) and by the height of each half.
+        val gutterMin = faceControlSize + spacing * 2
+        val maxWidthByGutters = (safeWidth - gutterMin * 2).toFloat()
+        val maxWidthByUpper = (upperHalf - spacing) * consoleAspectRatio
+        val maxWidthByLower = (lowerHalf - startSelectRow - spacing) * consoleAspectRatio
+        val screenWidth = minOf(maxWidthByGutters, maxWidthByUpper, maxWidthByLower)
+            .toInt()
+            .coerceAtLeast((safeWidth * 0.4f).toInt())
+        val screenHeight = (screenWidth / consoleAspectRatio).toInt()
+        val screenLeft = safeLeft + (safeWidth - screenWidth) / 2
+        val screenRight = screenLeft + screenWidth
+
+        val topScreen = Rect(screenLeft, splitTop - screenHeight, screenWidth, screenHeight)
+        val bottomScreen = Rect(screenLeft, splitBottom, screenWidth, screenHeight)
+
+        // Face controls in the side margins, vertically centred on the touch screen.
+        val controlsY = bottomScreen.y + (screenHeight - faceControlSize) / 2
+        val leftGutter = screenLeft - safeLeft
+        val rightGutter = (width - safeRight) - screenRight
+        val dpad = Rect(safeLeft + (leftGutter - faceControlSize) / 2, controlsY, faceControlSize, faceControlSize)
+        val buttons = Rect(screenRight + (rightGutter - faceControlSize) / 2, controlsY, faceControlSize, faceControlSize)
+
+        // Shoulder buttons in the top corners of the lower half.
+        val lButton = Rect(safeLeft + spacing, splitBottom + spacing, lrButtonSize, lrButtonSize)
+        val rButton = Rect(width - safeRight - spacing - lrButtonSize, splitBottom + spacing, lrButtonSize, lrButtonSize)
+
+        // Start / Select centred under the touch screen.
+        val ssY = bottomScreen.bottom + spacing
+        val select = Rect(width / 2 - smallButtonSize - spacing / 2, ssY, smallButtonSize, smallButtonSize)
+        val start = Rect(width / 2 + spacing / 2, ssY, smallButtonSize, smallButtonSize)
+
+        // Utility buttons: compact centred row at the top of the upper half.
+        val utils = listOf(
+            LayoutComponent.BUTTON_HINGE,
+            LayoutComponent.BUTTON_TOGGLE_SOFT_INPUT,
+            LayoutComponent.BUTTON_MICROPHONE_TOGGLE,
+            LayoutComponent.BUTTON_FAST_FORWARD_TOGGLE,
+            LayoutComponent.BUTTON_SWAP_SCREENS,
+        )
+        val utilTotalWidth = utils.size * smallButtonSize + (utils.size - 1) * spacing
+        var utilX = width / 2 - utilTotalWidth / 2
+        val utilComponents = utils.map { component ->
+            val rect = Rect(utilX, safeTop + spacing, smallButtonSize, smallButtonSize)
+            utilX += smallButtonSize + spacing
+            PositionedLayoutComponent(rect, component)
+        }
+
+        return ScreenLayout(
+            listOf(
+                PositionedLayoutComponent(topScreen, LayoutComponent.TOP_SCREEN),
+                PositionedLayoutComponent(bottomScreen, LayoutComponent.BOTTOM_SCREEN),
+                PositionedLayoutComponent(dpad, LayoutComponent.DPAD),
+                PositionedLayoutComponent(buttons, LayoutComponent.BUTTONS),
+                PositionedLayoutComponent(lButton, LayoutComponent.BUTTON_L),
+                PositionedLayoutComponent(rButton, LayoutComponent.BUTTON_R),
+                PositionedLayoutComponent(select, LayoutComponent.BUTTON_SELECT),
+                PositionedLayoutComponent(start, LayoutComponent.BUTTON_START),
+            ) + utilComponents
         )
     }
 
