@@ -39,6 +39,26 @@ class NdsRomCache(private val context: Context, private val settingsRepository: 
         return result
     }
 
+    /**
+     * folDS: reclaim disk on startup. Drops any temp file left behind by an interrupted extraction
+     * and evicts least-recently-used cached ROMs until the cache is back under the configured limit.
+     */
+    fun trimToMax() {
+        val romCacheDir = context.externalCacheDir?.let { File(it, ROMS_CACHE_DIR) } ?: return
+        if (!romCacheDir.isDirectory) {
+            return
+        }
+
+        File(romCacheDir, TEMP_FILE_NAME).delete()
+
+        val currentCacheSize = calculateCacheSize()
+        val maxCacheSize = settingsRepository.getRomCacheMaxSize()
+        if (currentCacheSize > maxCacheSize) {
+            freeCacheSpace(currentCacheSize - maxCacheSize)
+        }
+        cacheModifiedSubject.trySend(Unit)
+    }
+
     fun getCachedRomFile(rom: Rom, forUse: Boolean = false): Uri? {
         val romHash = rom.uri.hashCode().toString()
         val romCacheDir = context.externalCacheDir?.let { File(it, ROMS_CACHE_DIR) }

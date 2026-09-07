@@ -267,6 +267,7 @@ class EmulatorViewModel @Inject constructor(
                 _emulatorState.value = EmulatorState.RunningRom(rom)
                 startTrackingFps()
                 startTrackingPlayTime(rom)
+                startAutoSave(rom)
             }
         }
     }
@@ -416,6 +417,31 @@ class EmulatorViewModel @Inject constructor(
                 val now = System.currentTimeMillis()
                 romsRepository.addRomPlayTime(rom, (now - lastTime).milliseconds)
                 lastTime = now
+            }
+        }
+    }
+
+    /**
+     * folDS: periodically writes the emulator state to the ROM's quick-save slot while it is
+     * running. The interval and on/off switch are read every tick so Settings changes take
+     * effect without restarting the game.
+     */
+    private fun startAutoSave(rom: Rom) {
+        sessionCoroutineScope.launch {
+            while (isActive) {
+                delay(settingsRepository.getAutoSaveIntervalMinutes() * 60_000L)
+                if (!settingsRepository.isAutoSaveEnabled()) {
+                    continue
+                }
+                if (_emulatorState.value !is EmulatorState.RunningRom) {
+                    continue
+                }
+                emulatorManager.pauseEmulator()
+                val quickSlot = saveStatesRepository.getRomQuickSaveStateSlot(rom)
+                if (saveRomState(rom, quickSlot)) {
+                    _toastEvent.emit(ToastEvent.QuickSaveSuccessful)
+                }
+                emulatorManager.resumeEmulator()
             }
         }
     }

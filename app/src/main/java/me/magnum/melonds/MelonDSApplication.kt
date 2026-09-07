@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import me.magnum.melonds.common.UriFileHandler
 import me.magnum.melonds.common.uridelegates.UriHandler
 import me.magnum.melonds.domain.repositories.SettingsRepository
+import me.magnum.melonds.impl.NdsRomCache
 import me.magnum.melonds.migrations.Migrator
 import javax.inject.Inject
 
@@ -31,6 +32,7 @@ class MelonDSApplication : Application(), Configuration.Provider {
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var migrator: Migrator
     @Inject lateinit var uriHandler: UriHandler
+    @Inject lateinit var ndsRomCache: NdsRomCache
 
     override fun onCreate() {
         super.onCreate()
@@ -38,6 +40,15 @@ class MelonDSApplication : Application(), Configuration.Provider {
         applyTheme()
         performMigrations()
         MelonDSAndroidInterface.setup(UriFileHandler(this, uriHandler))
+        trimCaches()
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun trimCaches() {
+        // folDS: keep the extracted-ROM cache under its configured cap between sessions.
+        GlobalScope.launch(Dispatchers.IO) {
+            ndsRomCache.trimToMax()
+        }
     }
 
     private fun createNotificationChannels() {

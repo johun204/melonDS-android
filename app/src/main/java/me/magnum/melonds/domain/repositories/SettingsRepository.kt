@@ -54,6 +54,8 @@ interface SettingsRepository {
     fun getSaveFileDirectory(rom: Rom): Uri
     fun getSaveStateLocation(rom: Rom): SaveStateLocation
     fun getSaveStateDirectory(rom: Rom): Uri?
+    fun isAutoSaveEnabled(): Boolean
+    fun getAutoSaveIntervalMinutes(): Int
 
     fun getControllerConfiguration(): ControllerConfiguration
     fun observeControllerConfiguration(): StateFlow<ControllerConfiguration>

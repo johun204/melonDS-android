@@ -27,4 +27,22 @@
             android:entries="@array/save_state_locations"
             android:entryValues="@array/save_state_location_values"
             android:defaultValue="save_dir" />
+
+    <SwitchPreference
+            android:key="autosave_enabled"
+            android:title="@string/autosave_title"
+            android:summary="@string/autosave_summary"
+            app:iconSpaceReserved="false"
+            android:defaultValue="false" />
+
+    <SeekBarPreference
+            android:key="autosave_interval_minutes"
+            android:title="@string/autosave_interval_title"
+            android:dependency="autosave_enabled"
+            app:min="1"
+            android:max="30"
+            android:defaultValue="5"
+            app:showSeekBarValue="true"
+            app:updatesContinuously="true"
+            app:iconSpaceReserved="false" />
 </PreferenceScreen>

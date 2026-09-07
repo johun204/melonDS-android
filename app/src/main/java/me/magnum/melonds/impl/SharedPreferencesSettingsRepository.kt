@@ -187,6 +187,14 @@ class SharedPreferencesSettingsRepository(
         return preferences.getBoolean("enable_rewind", false)
     }
 
+    override fun isAutoSaveEnabled(): Boolean {
+        return preferences.getBoolean("autosave_enabled", false)
+    }
+
+    override fun getAutoSaveIntervalMinutes(): Int {
+        return preferences.getInt("autosave_interval_minutes", 5).coerceAtLeast(1)
+    }
+
     override fun getRewindWindowPosition(): RewindWindowPosition {
         val positionPreference = preferences.getString("rewind_window_position", "bottom")!!
         return RewindWindowPosition.valueOf(positionPreference.uppercase())
